@@ -27,7 +27,7 @@ type session struct {
 }
 
 func (s *session) AuthPlain(username, password string) error {
-	return nil
+	return errors.New("submittion is not allowed")
 }
 
 func (s *session) Mail(from string, opts *smtp.MailOptions) error {

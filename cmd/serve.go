@@ -29,9 +29,10 @@ func main() {
 
 	s.Addr = addr
 	s.Domain = domain
-	s.AllowInsecureAuth = true
+	s.AllowInsecureAuth = false
 	s.Debug = os.Stdout
 
 	log.Println("Starting SMTP server at", addr)
+	log.Println("Allowed rcpt is", allowedRcpt)
 	log.Fatal(s.ListenAndServe())
 }
