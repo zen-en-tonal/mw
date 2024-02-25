@@ -1,4 +1,4 @@
-FROM golang:1.18-bullseye
+FROM golang:1.19-bullseye
 
 EXPOSE 25
 
@@ -12,4 +12,4 @@ COPY . .
 RUN go mod download
 RUN go build -o app cmd/serve.go
 
-CMD [ "sh", "-c", "./app -l 0.0.0.0:25 -s $SLACK_URL -d $DOMAIN -u $USERNAME" ]
+CMD [ "sh", "-c", "./app -l 0.0.0.0:25 -s $SLACK_URL -d $DOMAIN" ]
