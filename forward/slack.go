@@ -19,7 +19,7 @@ func NewSlack(url string) Slack {
 	return Slack{url}
 }
 
-func template(env enmime.Envelope, c mail.Contact) string {
+func payload(env enmime.Envelope, c mail.Contact) string {
 	tmp := `
 	{
 		"text": "New message recieved.",
@@ -52,12 +52,25 @@ func template(env enmime.Envelope, c mail.Contact) string {
 				"type": "section",
 				"text": {
 					"type": "plain_text",
-					"text": "%s"
+					"text": %#v
 				}
 			}
 		]
 	}`
-	return fmt.Sprintf(tmp, env.GetHeader("Subject"), env.GetHeader("From"), c.Alias(), env.Text)
+	var text []rune
+	for i, r := range env.Text {
+		if i >= 3000 {
+			break
+		}
+		text = append(text, r)
+	}
+	return fmt.Sprintf(
+		tmp,
+		env.GetHeader("Subject"),
+		env.GetHeader("From"),
+		c.Alias(),
+		string(text),
+	)
 }
 
 func (s Slack) Forward(a mail.Contact, r io.Reader) error {
@@ -66,7 +79,9 @@ func (s Slack) Forward(a mail.Contact, r io.Reader) error {
 		return err
 	}
 
-	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(template(*env, a))))
+	p := payload(*env, a)
+	fmt.Println(p)
+	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(p)))
 	if err != nil {
 		return err
 	}
