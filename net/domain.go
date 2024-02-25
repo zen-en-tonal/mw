@@ -56,7 +56,7 @@ func ParseDomain(s string) (*Domain, error) {
 	name := match[3]
 	top := match[4]
 	if name == "" || top == "" {
-		return nil, errors.New("")
+		return nil, errors.New("invalid domain")
 	}
 	return &Domain{
 		Top:  top,

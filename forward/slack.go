@@ -72,7 +72,7 @@ func (s Slack) Forward(a mail.MailAddress, r io.Reader) error {
 		return err
 	}
 	if resp.StatusCode >= 400 {
-		return errors.New("")
+		return errors.New("failed to send to slack")
 	}
 
 	return nil

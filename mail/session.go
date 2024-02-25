@@ -1,7 +1,6 @@
 package mail
 
 import (
-	"errors"
 	"io"
 
 	"github.com/zen-en-tonal/mw/net"
@@ -34,7 +33,7 @@ type Reception struct {
 
 func (r Reception) Accept(to MailAddress) (*Accept, error) {
 	if to != r.userAddr {
-		return nil, errors.New("")
+		return nil, ErrInvaildRcpt
 	}
 	return &Accept{reception: &r}, nil
 }
@@ -47,5 +46,6 @@ func (a Accept) Forward(r io.Reader) error {
 	if a.reception == nil {
 		return ErrInvaildProtocol
 	}
-	return a.reception.session.forward.Forward(a.reception.userAddr, r)
+	f := a.reception.session.forward
+	return f.Forward(a.reception.userAddr, r)
 }

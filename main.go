@@ -46,6 +46,7 @@ func main() {
 	s.Domain = domain.String()
 	s.AllowInsecureAuth = false
 	s.Debug = os.Stdout
+	s.ErrorLog = log.Default()
 
 	shutdown := make(chan bool, 1)
 
