@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/jhillyerd/enmime"
-	"github.com/mattn/godown"
 	"github.com/zen-en-tonal/mw/mail"
 )
 
@@ -21,13 +19,7 @@ func NewSlack(url string) Slack {
 	return Slack{url}
 }
 
-func template(env enmime.Envelope) string {
-	if env.HTML != "" {
-		var buf bytes.Buffer
-		if err := godown.Convert(&buf, strings.NewReader(env.HTML), nil); err == nil {
-			env.Text = buf.String()
-		}
-	}
+func template(env enmime.Envelope, c mail.Contact) string {
 	tmp := `
 	{
 		"text": "New message recieved.",
@@ -47,18 +39,25 @@ func template(env enmime.Envelope) string {
 				}
 			},
 			{
+				"type": "section",
+				"text": {
+					"type": "plain_text",
+					"text": "alias: %s"
+				}
+			},
+			{
 				"type": "divider"
 			},
 			{
 				"type": "section",
 				"text": {
-					"type": "mrkdwn",
+					"type": "plain_text",
 					"text": "%s"
 				}
 			}
 		]
 	}`
-	return fmt.Sprintf(tmp, env.GetHeader("Subject"), env.GetHeader("From"), env.Text)
+	return fmt.Sprintf(tmp, env.GetHeader("Subject"), env.GetHeader("From"), c.Alias(), env.Text)
 }
 
 func (s Slack) Forward(a mail.Contact, r io.Reader) error {
@@ -67,7 +66,7 @@ func (s Slack) Forward(a mail.Contact, r io.Reader) error {
 		return err
 	}
 
-	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(template(*env))))
+	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(template(*env, a))))
 	if err != nil {
 		return err
 	}
