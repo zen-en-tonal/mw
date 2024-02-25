@@ -3,7 +3,6 @@ package registries
 import (
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/zen-en-tonal/mw/mail"
-	"github.com/zen-en-tonal/mw/net"
 )
 
 type KV struct {
@@ -14,21 +13,21 @@ func NewKV(opt badger.Options) KV {
 	return KV{opt: opt}
 }
 
-func (k KV) Find(domain net.Domain) (*mail.Registry, error) {
+func (k KV) Find(addr mail.MailAddress) (*mail.Contact, error) {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	var user string
+	var alias string
 	err = db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get([]byte(domain.String()))
+		item, err := txn.Get([]byte(addr.User()))
 		if err != nil {
 			return err
 		}
 		return item.Value(func(v []byte) error {
-			user = string(v)
+			alias = string(v)
 			return nil
 		})
 	})
@@ -36,11 +35,11 @@ func (k KV) Find(domain net.Domain) (*mail.Registry, error) {
 		return nil, err
 	}
 
-	r := mail.NewRegistry(domain, user)
+	r := mail.NewContact(alias, addr.User())
 	return &r, nil
 }
 
-func (k KV) Update(r mail.Registry) error {
+func (k KV) Update(r mail.Contact) error {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return err
@@ -48,18 +47,18 @@ func (k KV) Update(r mail.Registry) error {
 	defer db.Close()
 
 	return db.Update(func(txn *badger.Txn) error {
-		return txn.Set([]byte(r.Service()), []byte(r.User()))
+		return txn.Set([]byte(r.User()), []byte(r.Alias()))
 	})
 }
 
-func (k KV) All() (*[]mail.Registry, error) {
+func (k KV) All() (*[]mail.Contact, error) {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	var array []mail.Registry
+	var array []mail.Contact
 	err = db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 10
@@ -68,9 +67,9 @@ func (k KV) All() (*[]mail.Registry, error) {
 
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			domain := net.MustParseDomain(string(item.Key()))
+			user := string(item.Key())
 			err := item.Value(func(v []byte) error {
-				array = append(array, mail.NewRegistry(domain, string(v)))
+				array = append(array, mail.NewContact(string(v), user))
 				return nil
 			})
 			if err != nil {

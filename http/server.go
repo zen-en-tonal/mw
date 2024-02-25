@@ -5,21 +5,20 @@ import (
 	"net/http"
 
 	"github.com/zen-en-tonal/mw/mail"
-	"github.com/zen-en-tonal/mw/net"
 )
 
 type Registry interface {
-	Update(r mail.Registry) error
-	All() (*[]mail.Registry, error)
+	Update(r mail.Contact) error
+	All() (*[]mail.Contact, error)
 }
 
 type State struct {
 	Registry
 	secret string
-	host   net.Domain
+	host   string
 }
 
-func New(r Registry, sec string, host net.Domain) State {
+func New(r Registry, sec string, host string) State {
 	return State{r, sec, host}
 }
 
@@ -43,10 +42,10 @@ type registry struct {
 	Service     string `json:"service"`
 }
 
-func from(r mail.Registry, host net.Domain) registry {
+func from(r mail.Contact, host string) registry {
 	return registry{
 		MailAddress: mail.NewMailAddress(r.User(), host).String(),
-		Service:     r.Service(),
+		Service:     r.Alias(),
 	}
 }
 
@@ -91,13 +90,7 @@ func (s State) newHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := net.ParseDomain(body.Service)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	reg := mail.Issue(*d)
+	reg := mail.GenearteContact(body.Service)
 	err = s.Registry.Update(reg)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

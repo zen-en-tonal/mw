@@ -61,7 +61,7 @@ func template(env enmime.Envelope) string {
 	return fmt.Sprintf(tmp, env.GetHeader("Subject"), env.GetHeader("From"), env.Text)
 }
 
-func (s Slack) Forward(a mail.MailAddress, r io.Reader) error {
+func (s Slack) Forward(a mail.Contact, r io.Reader) error {
 	env, err := enmime.ReadEnvelope(r)
 	if err != nil {
 		return err

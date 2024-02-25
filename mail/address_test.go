@@ -2,8 +2,6 @@ package mail
 
 import (
 	"testing"
-
-	"github.com/zen-en-tonal/mw/net"
 )
 
 func TestParseAddress(t *testing.T) {
@@ -12,9 +10,8 @@ func TestParseAddress(t *testing.T) {
 		t.Error(err)
 	}
 
-	expacted := NewMailAddress("user", net.MustParseDomain("example.com"))
-	if expacted.user != actual.user || expacted.domain.String() != actual.domain.String() {
-		t.Error("assertion failed", "expected", expacted, "actual", actual)
+	if actual.user != "user" || actual.domain != "example.com" {
+		t.Error("assertion failed")
 	}
 }
 

@@ -3,20 +3,26 @@ package mail
 import (
 	"errors"
 	"regexp"
-
-	"github.com/zen-en-tonal/mw/net"
 )
 
 type MailAddress struct {
 	user   string
-	domain net.Domain
+	domain string
 }
 
 func (m MailAddress) String() string {
-	return m.user + "@" + m.domain.String()
+	return m.user + "@" + m.domain
 }
 
-func NewMailAddress(user string, domain net.Domain) MailAddress {
+func (m MailAddress) User() string {
+	return m.user
+}
+
+func (m MailAddress) Domain() string {
+	return m.domain
+}
+
+func NewMailAddress(user string, domain string) MailAddress {
 	return MailAddress{
 		user:   user,
 		domain: domain,
@@ -31,14 +37,8 @@ func ParseMailAddress(address string) (*MailAddress, error) {
 	if len(match) != 4 {
 		return nil, errors.New("invalid mail address")
 	}
-	u := match[1]
-	d := match[2]
-	domain, err := net.ParseDomain(d)
-	if err != nil {
-		return nil, err
-	}
 	return &MailAddress{
-		user:   u,
-		domain: *domain,
-	}, err
+		user:   match[1],
+		domain: match[2],
+	}, nil
 }
