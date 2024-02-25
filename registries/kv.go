@@ -52,7 +52,7 @@ func (k KV) Update(r mail.Registry) error {
 	})
 }
 
-func (k KV) All() (*mail.RegistryArray, error) {
+func (k KV) All() (*[]mail.Registry, error) {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return nil, err
@@ -83,5 +83,5 @@ func (k KV) All() (*mail.RegistryArray, error) {
 		return nil, err
 	}
 
-	return (*mail.RegistryArray)(&array), nil
+	return &array, nil
 }

@@ -3,10 +3,12 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"os"
 
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/zen-en-tonal/mw/forward"
+	h "github.com/zen-en-tonal/mw/http"
 	"github.com/zen-en-tonal/mw/mail"
 	"github.com/zen-en-tonal/mw/net"
 	"github.com/zen-en-tonal/mw/registries"
@@ -15,15 +17,21 @@ import (
 var addr = "0.0.0.0:25"
 var slackUrl = ""
 var domain = ""
+var secret = ""
 
 func init() {
-	flag.StringVar(&addr, "l", addr, "Listen address")
 	flag.StringVar(&slackUrl, "s", slackUrl, "Slack webhook url")
 	flag.StringVar(&domain, "d", domain, "Domain")
+	flag.StringVar(&secret, "t", secret, "Secret")
 }
 
 func main() {
 	flag.Parse()
+
+	if secret == "" {
+		log.Fatal("secret must have a value")
+		return
+	}
 
 	opt := badger.DefaultOptions("db")
 	kv := registries.NewKV(opt)
@@ -31,17 +39,32 @@ func main() {
 	slack := forward.NewSlack(slackUrl)
 	s := mail.NewServer(kv, domain, slack)
 
-	init := mail.Issue(net.MustParseDomain("example.com"))
-	kv.Update(init)
+	restState := h.New(kv, secret, domain)
+	http.HandleFunc("/", restState.Handle)
 
-	s.Addr = addr
+	s.Addr = "0.0.0.0:25"
 	s.Domain = domain.String()
 	s.AllowInsecureAuth = false
 	s.Debug = os.Stdout
 
-	log.Println("Starting SMTP server at", addr)
-	log.Println("Accept host", init.Service())
-	log.Println("Accept user", init.User())
+	shutdown := make(chan bool, 1)
 
-	log.Fatal(s.ListenAndServe())
+	listenSmtp := func() {
+		log.Println("Starting SMTP server at", s.Addr)
+		log.Fatal(s.ListenAndServe())
+		close(shutdown)
+	}
+	listenHttp := func() {
+		log.Println("Starting HTTP server at", "0.0.0.0:8080")
+		log.Fatal(http.ListenAndServe(":8080", nil))
+		close(shutdown)
+	}
+
+	go listenSmtp()
+	go listenHttp()
+	func() {
+		for _ = range shutdown {
+		}
+		panic("")
+	}()
 }

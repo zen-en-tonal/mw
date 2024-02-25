@@ -12,6 +12,10 @@ type MailAddress struct {
 	domain net.Domain
 }
 
+func (m MailAddress) String() string {
+	return m.user + "@" + m.domain.String()
+}
+
 func NewMailAddress(user string, domain net.Domain) MailAddress {
 	return MailAddress{
 		user:   user,
