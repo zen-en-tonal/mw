@@ -4,37 +4,34 @@ import (
 	"io"
 
 	"github.com/emersion/go-smtp"
-	"github.com/zen-en-tonal/mw/net"
 )
 
-func NewServer(registries Registries, domain net.Domain, forward Forward) *smtp.Server {
+func NewServer(book ContactBook, domain string, forward Forward) *smtp.Server {
 	return smtp.NewServer(&backend{
-		forward:    forward,
-		registries: registries,
-		domain:     domain,
+		forward: forward,
+		book:    book,
+		domain:  domain,
 	})
 }
 
 type backend struct {
-	registries Registries
-	domain     net.Domain
-	forward    Forward
+	book    ContactBook
+	domain  string
+	forward Forward
 }
 
 func (bkd *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
-	return &state{
-		session: Session{
-			registries: bkd.registries,
-			domain:     bkd.domain,
-			forward:    bkd.forward,
-		},
-	}, nil
+	s := Session{
+		book:    bkd.book,
+		domain:  bkd.domain,
+		forward: bkd.forward,
+	}
+	return &state{&s, nil}, nil
 }
 
 type state struct {
-	session   Session
-	reception *Reception
-	accept    *Accept
+	*Session
+	accept *Accept
 }
 
 func (s *state) AuthPlain(username, password string) error {
@@ -42,27 +39,19 @@ func (s *state) AuthPlain(username, password string) error {
 }
 
 func (s *state) Mail(from string, opts *smtp.MailOptions) error {
-	f, err := ParseMailAddress(from)
+	_, err := ParseMailAddress(from)
 	if err != nil {
 		return err
 	}
-	rcpt, err := s.session.Reception(*f)
-	if err != nil {
-		return err
-	}
-	s.reception = rcpt
 	return nil
 }
 
 func (s *state) Rcpt(to string, opts *smtp.RcptOptions) error {
-	if s.reception == nil {
-		return ErrInvaildProtocol
-	}
 	t, err := ParseMailAddress(to)
 	if err != nil {
 		return err
 	}
-	a, err := s.reception.Accept(*t)
+	a, err := s.Accept(*t)
 	if err != nil {
 		return err
 	}
@@ -79,7 +68,6 @@ func (s *state) Data(r io.Reader) error {
 
 func (s *state) Reset() {
 	s.accept = nil
-	s.reception = nil
 }
 
 func (s *state) Logout() error {

@@ -2,50 +2,38 @@ package mail
 
 import (
 	"io"
-
-	"github.com/zen-en-tonal/mw/net"
 )
 
 type Forward interface {
-	Forward(from MailAddress, body io.Reader) error
+	Forward(from Contact, body io.Reader) error
+}
+
+type ContactBook interface {
+	Find(to MailAddress) (*Contact, error)
 }
 
 type Session struct {
-	registries Registries
-	domain     net.Domain
-	forward    Forward
+	book    ContactBook
+	domain  string
+	forward Forward
 }
 
-// Registriesにあるドメインとマッチするfromを受け入れる.
-func (s Session) Reception(from MailAddress) (*Reception, error) {
-	registry, err := s.registries.Find(from.domain.TrimSub())
+func (r Session) Accept(to MailAddress) (*Accept, error) {
+	cont, err := r.book.Find(to)
 	if err != nil {
 		return nil, err
 	}
-	addr := NewMailAddress(registry.User(), s.domain)
-	return &Reception{userAddr: addr, session: &s}, nil
-}
-
-type Reception struct {
-	session  *Session
-	userAddr MailAddress
-}
-
-func (r Reception) Accept(to MailAddress) (*Accept, error) {
-	if to != r.userAddr {
+	if to != cont.AsAddress(r.domain) {
 		return nil, ErrInvaildRcpt
 	}
-	return &Accept{reception: &r}, nil
+	return &Accept{*cont, r.forward}, nil
 }
 
 type Accept struct {
-	reception *Reception
+	from    Contact
+	forward Forward
 }
 
 func (a Accept) Forward(r io.Reader) error {
-	if a.reception == nil {
-		return ErrInvaildProtocol
-	}
-	f := a.reception.session.forward
-	return f.Forward(a.reception.userAddr, r)
+	return a.forward.Forward(a.from, r)
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/zen-en-tonal/mw/forward"
 	h "github.com/zen-en-tonal/mw/http"
 	"github.com/zen-en-tonal/mw/mail"
-	"github.com/zen-en-tonal/mw/net"
 	"github.com/zen-en-tonal/mw/registries"
 )
 
@@ -35,7 +34,6 @@ func main() {
 
 	opt := badger.DefaultOptions("db")
 	kv := registries.NewKV(opt)
-	domain := net.MustParseDomain(domain)
 	slack := forward.NewSlack(slackUrl)
 	s := mail.NewServer(kv, domain, slack)
 
@@ -43,7 +41,7 @@ func main() {
 	http.HandleFunc("/", restState.Handle)
 
 	s.Addr = "0.0.0.0:25"
-	s.Domain = domain.String()
+	s.Domain = domain
 	s.AllowInsecureAuth = false
 	s.Debug = os.Stdout
 	s.ErrorLog = log.Default()
