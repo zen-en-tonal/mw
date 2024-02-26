@@ -14,6 +14,29 @@ func TestMailboxFail(t *testing.T) {
 	}
 }
 
+func TestForwardFails(t *testing.T) {
+	fs := Forwarders([]Forwarder{
+		NullForwarder{},
+		fallable{},
+		NullForwarder{},
+	})
+	err := fs.Forward(Envelope{})
+	if err == nil {
+		t.Errorf("should failed")
+	}
+}
+
+func TestForwarders(t *testing.T) {
+	fs := Forwarders([]Forwarder{
+		NullForwarder{},
+		NullForwarder{},
+	})
+	err := fs.Forward(Envelope{})
+	if err != nil {
+		t.Errorf("should not failed")
+	}
+}
+
 type fallable struct{}
 
 func (f fallable) Forward(env Envelope) error {
