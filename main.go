@@ -7,13 +7,13 @@ import (
 	"os"
 
 	badger "github.com/dgraph-io/badger/v4"
-	"github.com/zen-en-tonal/mw/forward"
 	h "github.com/zen-en-tonal/mw/http"
+	"github.com/zen-en-tonal/mw/internal/contact"
+	"github.com/zen-en-tonal/mw/internal/slack"
 	"github.com/zen-en-tonal/mw/mail"
-	"github.com/zen-en-tonal/mw/registries"
+	"github.com/zen-en-tonal/mw/smtp"
 )
 
-var addr = "0.0.0.0:25"
 var slackUrl = ""
 var domain = ""
 var secret = ""
@@ -33,9 +33,12 @@ func main() {
 	}
 
 	opt := badger.DefaultOptions("db")
-	kv := registries.NewKV(opt)
-	slack := forward.NewSlack(slackUrl)
-	s := mail.NewServer(kv, domain, slack)
+	kv := contact.NewKV(opt)
+
+	filter := contact.NewFilter(kv, domain)
+	slack := slack.New(slackUrl)
+	r := mail.NewMailbox(filter, slack, mail.NullStorage{})
+	s := smtp.New(r)
 
 	restState := h.New(kv, secret, domain)
 	http.HandleFunc("/", restState.Handle)
