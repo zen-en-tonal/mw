@@ -33,3 +33,11 @@ func NewEnvelope(from string, to string, data io.Reader) (*Envelope, error) {
 	}
 	return &Envelope{from: f, to: t, data: data}, nil
 }
+
+func MustNewEnvelope(from string, to string, data io.Reader) Envelope {
+	e, err := NewEnvelope(from, to, data)
+	if err != nil {
+		panic(err)
+	}
+	return *e
+}
