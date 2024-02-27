@@ -2,8 +2,8 @@ package slack
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/jhillyerd/enmime"
@@ -59,6 +59,7 @@ func payload(env enmime.Envelope) string {
 	var text []rune
 	for i, r := range env.Text {
 		if i >= 3000 {
+			slog.Info("message is trimed up to 3000 runes")
 			break
 		}
 		text = append(text, r)
@@ -86,7 +87,7 @@ func (s Slack) Forward(e mail.Envelope) error {
 		return err
 	}
 	if resp.StatusCode >= 400 {
-		return errors.New("failed to send to slack")
+		return fmt.Errorf("failed to send to slack with status %s", resp.Status)
 	}
 
 	return nil

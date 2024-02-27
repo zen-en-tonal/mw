@@ -1,6 +1,6 @@
 module github.com/zen-en-tonal/mw
 
-go 1.19
+go 1.22.0
 
 require (
 	github.com/dgraph-io/badger/v4 v4.2.0

@@ -67,9 +67,9 @@ func (s State) listHandler(w http.ResponseWriter, r *http.Request) {
 	json, err := json.Marshal(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	w.Write(json)
-	w.WriteHeader(http.StatusOK)
 }
 
 type req struct {
@@ -101,7 +101,7 @@ func (s State) newHandler(w http.ResponseWriter, r *http.Request) {
 	json, err := json.Marshal(from(reg, s.host))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	w.Write(json)
-	w.WriteHeader(http.StatusOK)
 }

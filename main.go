@@ -2,9 +2,9 @@ package main
 
 import (
 	"flag"
-	"log"
+	"log/slog"
 	"net/http"
-	"os"
+	"time"
 
 	badger "github.com/dgraph-io/badger/v4"
 	h "github.com/zen-en-tonal/mw/http"
@@ -18,27 +18,50 @@ var slackUrl = ""
 var domain = ""
 var secret = ""
 
+var smtpHost = ""
+var smtpPort = 0
+var smtpUser = ""
+var smtpPass = ""
+var smtpTo = ""
+
 func init() {
 	flag.StringVar(&slackUrl, "s", slackUrl, "Slack webhook url")
 	flag.StringVar(&domain, "d", domain, "Domain")
 	flag.StringVar(&secret, "t", secret, "Secret")
 }
 
+func fowarder() mail.Forwarder {
+	return mail.Forwarders([]mail.Forwarder{
+		slack.New(slackUrl),
+		// forward.New(smtpHost, smtpPort, smtpUser, smtpPass, smtpTo),
+	})
+}
+
+func filter(kv contact.KV) mail.Filter {
+	return contact.NewFilter(kv, domain)
+}
+
+func storage() mail.Storage {
+	return mail.NullStorage{}
+}
+
 func main() {
 	flag.Parse()
 
 	if secret == "" {
-		log.Fatal("secret must have a value")
+		slog.Error("secret must have a value")
 		return
 	}
 
 	opt := badger.DefaultOptions("db")
 	kv := contact.NewKV(opt)
 
-	filter := contact.NewFilter(kv, domain)
-	slack := slack.New(slackUrl)
-	r := mail.NewMailbox(filter, slack, mail.NullStorage{})
-	s := smtp.New(r)
+	r := mail.NewMailbox(
+		filter(kv),
+		fowarder(),
+		storage(),
+	)
+	s := smtp.New(r, time.Second*5)
 
 	restState := h.New(kv, secret, domain)
 	http.HandleFunc("/", restState.Handle)
@@ -46,27 +69,23 @@ func main() {
 	s.Addr = "0.0.0.0:25"
 	s.Domain = domain
 	s.AllowInsecureAuth = false
-	s.Debug = os.Stdout
-	s.ErrorLog = log.Default()
 
-	shutdown := make(chan bool, 1)
+	shutdown := make(chan error)
 
 	listenSmtp := func() {
-		log.Println("Starting SMTP server at", s.Addr)
-		log.Fatal(s.ListenAndServe())
+		slog.Info("Starting SMTP server", "addr", s.Addr)
+		shutdown <- s.ListenAndServe()
 		close(shutdown)
 	}
 	listenHttp := func() {
-		log.Println("Starting HTTP server at", "0.0.0.0:8080")
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		slog.Info("Starting HTTP server", "addr", "0.0.0.0:8080")
+		shutdown <- http.ListenAndServe(":8080", nil)
 		close(shutdown)
 	}
 
 	go listenSmtp()
 	go listenHttp()
-	func() {
-		for _ = range shutdown {
-		}
-		panic("")
-	}()
+	for err := range shutdown {
+		slog.Error("server failed", err)
+	}
 }

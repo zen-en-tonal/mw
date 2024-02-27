@@ -1,6 +1,10 @@
 package contact
 
-import "github.com/zen-en-tonal/mw/mail"
+import (
+	"fmt"
+
+	"github.com/zen-en-tonal/mw/mail"
+)
 
 type ContactBook interface {
 	Find(to mail.Address) (*Contact, error)
@@ -17,11 +21,19 @@ func NewFilter(book ContactBook, domain string) Filter {
 
 func (f Filter) Validate(env mail.Envelope) error {
 	if env.To().Domain() != f.domain {
-		return mail.ErrInvaildDomain
+		return fmt.Errorf(
+			"domain miss matched. expected domain is %s but actual is %s",
+			env.To().Domain(),
+			f.domain,
+		)
 	}
 	_, err := f.Find(env.To())
 	if err != nil {
-		return mail.ErrInvaildRcpt
+		return fmt.Errorf(
+			"failed to find a thing with key %s: %w",
+			env.To().String(),
+			err,
+		)
 	}
 	return nil
 }
