@@ -11,7 +11,7 @@ type Slack struct {
 }
 
 func NewSlack(url string) Slack {
-	return Slack{MustNew(url, temp)}
+	return Slack{MustNew(url, temp, WithMarkdownParser)}
 }
 
 const temp = `
@@ -45,7 +45,7 @@ const temp = `
 		{
 			"type": "section",
 			"text": {
-				"type": "plain_text",
+				"type": "mrkdwn",
 				"text": "{{ .Text }}"
 			}
 		}
@@ -65,7 +65,7 @@ func trim(txt string, count int) string {
 }
 
 func (s Slack) Forward(e mail.Envelope) error {
-	p, err := ToPayload(e)
+	p, err := s.ToPayload(e)
 	if err != nil {
 		return err
 	}

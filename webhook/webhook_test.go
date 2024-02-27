@@ -14,7 +14,7 @@ func TestPrepareRequest(t *testing.T) {
 	tmp := `{"text":"{{ .Text }}","subject":"{{ .Subject }}"}`
 	w := MustNew("", tmp)
 	env := mail.MustNewEnvelope("from@mail.com", "to@mail.com", strings.NewReader(body))
-	payload, err := ToPayload(env)
+	payload, err := w.ToPayload(env)
 	if err != nil {
 		t.Error(err)
 	}

@@ -5,49 +5,83 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net/http"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/jhillyerd/enmime"
 	"github.com/zen-en-tonal/mw/mail"
 )
 
 type Webhook struct {
-	endpoint string
-	template template.Template
+	endpoint   string
+	template   template.Template
+	htmlParser *func(string) string
+	html       bool
 }
 
 type Payload struct {
 	Text    string
-	HTML    string
 	Subject string
 	From    string
 	To      string
 }
 
-func New(url string, temp string) (*Webhook, error) {
+type Option func(*Webhook)
+
+func WithMarkdownParser(w *Webhook) {
+	converter := md.NewConverter("", true, nil)
+	f := func(s string) string {
+		markdown, err := converter.ConvertString(s)
+		if err != nil {
+			slog.Error("failed to convert html to markdown", "internal", err)
+			return s
+		}
+		return markdown
+	}
+	w.htmlParser = &f
+	w.html = true
+}
+
+func New(url string, temp string, options ...Option) (*Webhook, error) {
 	t, err := template.New("").Parse(temp)
 	if err != nil {
 		return nil, err
 	}
-	return &Webhook{url, *t}, nil
+	w := Webhook{
+		endpoint:   url,
+		template:   *t,
+		htmlParser: nil,
+		html:       false,
+	}
+	for _, opt := range options {
+		opt(&w)
+	}
+	return &w, nil
 }
 
-func MustNew(url string, temp string) Webhook {
-	w, err := New(url, temp)
+func MustNew(url string, temp string, options ...Option) Webhook {
+	w, err := New(url, temp, options...)
 	if err != nil {
 		panic(err)
 	}
 	return *w
 }
 
-func ToPayload(e mail.Envelope) (*Payload, error) {
+func (w Webhook) ToPayload(e mail.Envelope) (*Payload, error) {
 	env, err := enmime.ReadEnvelope(e.Data())
 	if err != nil {
 		return nil, err
 	}
+	if env.HTML != "" && w.html {
+		env.Text = env.HTML
+	}
+	if w.htmlParser != nil {
+		f := *w.htmlParser
+		env.Text = f(env.Text)
+	}
 	return &Payload{
 		Text:    env.Text,
-		HTML:    env.HTML,
 		Subject: env.GetHeader("Subject"),
 		From:    env.GetHeader("From"),
 		To:      env.GetHeader("To"),
@@ -74,7 +108,7 @@ func (s Webhook) Post(r io.Reader) error {
 }
 
 func (s Webhook) Forward(e mail.Envelope) error {
-	payload, err := ToPayload(e)
+	payload, err := s.ToPayload(e)
 	if err != nil {
 		return err
 	}
