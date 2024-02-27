@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/zen-en-tonal/mw/internal/contact"
 	"github.com/zen-en-tonal/mw/mail"
 )
 
 type Registry interface {
-	Update(r mail.Contact) error
-	All() (*[]mail.Contact, error)
+	Update(r contact.Contact) error
+	All() (*[]contact.Contact, error)
 }
 
 type State struct {
@@ -42,9 +43,9 @@ type registry struct {
 	Service     string `json:"service"`
 }
 
-func from(r mail.Contact, host string) registry {
+func from(r contact.Contact, host string) registry {
 	return registry{
-		MailAddress: mail.NewMailAddress(r.User(), host).String(),
+		MailAddress: mail.NewAddress(r.User(), host).String(),
 		Service:     r.Alias(),
 	}
 }
@@ -66,9 +67,9 @@ func (s State) listHandler(w http.ResponseWriter, r *http.Request) {
 	json, err := json.Marshal(body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	w.Write(json)
-	w.WriteHeader(http.StatusOK)
 }
 
 type req struct {
@@ -90,7 +91,7 @@ func (s State) newHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reg := mail.GenearteContact(body.Service)
+	reg := contact.Generate(body.Service)
 	err = s.Registry.Update(reg)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -100,7 +101,7 @@ func (s State) newHandler(w http.ResponseWriter, r *http.Request) {
 	json, err := json.Marshal(from(reg, s.host))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	w.Write(json)
-	w.WriteHeader(http.StatusOK)
 }

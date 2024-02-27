@@ -1,9 +1,10 @@
-package mail
+package contact
 
 import (
 	"encoding/hex"
 
 	"github.com/google/uuid"
+	"github.com/zen-en-tonal/mw/mail"
 )
 
 type Contact struct {
@@ -11,18 +12,18 @@ type Contact struct {
 	user  string
 }
 
-func NewContact(alias string, user string) Contact {
+func New(alias string, user string) Contact {
 	return Contact{alias, user}
 }
 
-func GenearteContact(alias string) Contact {
+func Generate(alias string) Contact {
 	bytes, _ := uuid.New().MarshalBinary()
 	user := hex.EncodeToString(bytes)
-	return NewContact(alias, user)
+	return New(alias, user)
 }
 
-func (c Contact) AsAddress(domain string) MailAddress {
-	return NewMailAddress(c.user, domain)
+func (c Contact) AsAddress(domain string) mail.Address {
+	return mail.NewAddress(c.user, domain)
 }
 
 func (c Contact) User() string {

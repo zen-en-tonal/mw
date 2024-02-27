@@ -1,10 +1,9 @@
-package forward
+package slack
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/jhillyerd/enmime"
@@ -15,11 +14,11 @@ type Slack struct {
 	url string
 }
 
-func NewSlack(url string) Slack {
+func New(url string) Slack {
 	return Slack{url}
 }
 
-func payload(env enmime.Envelope, c mail.Contact) string {
+func payload(env enmime.Envelope) string {
 	tmp := `
 	{
 		"text": "New message recieved.",
@@ -42,7 +41,7 @@ func payload(env enmime.Envelope, c mail.Contact) string {
 				"type": "section",
 				"text": {
 					"type": "plain_text",
-					"text": "alias: %s"
+					"text": "to: %s"
 				}
 			},
 			{
@@ -60,6 +59,7 @@ func payload(env enmime.Envelope, c mail.Contact) string {
 	var text []rune
 	for i, r := range env.Text {
 		if i >= 3000 {
+			slog.Info("message is trimed up to 3000 runes")
 			break
 		}
 		text = append(text, r)
@@ -68,25 +68,26 @@ func payload(env enmime.Envelope, c mail.Contact) string {
 		tmp,
 		env.GetHeader("Subject"),
 		env.GetHeader("From"),
-		c.Alias(),
+		env.GetHeader("To"),
 		string(text),
 	)
 }
 
-func (s Slack) Forward(a mail.Contact, r io.Reader) error {
+func (s Slack) Forward(e mail.Envelope) error {
+	r := e.Data()
 	env, err := enmime.ReadEnvelope(r)
 	if err != nil {
 		return err
 	}
 
-	p := payload(*env, a)
-	fmt.Println(p)
+	p := payload(*env)
+
 	resp, err := http.Post(s.url, "application/json", bytes.NewReader([]byte(p)))
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode >= 400 {
-		return errors.New("failed to send to slack")
+		return fmt.Errorf("failed to send to slack with status %s", resp.Status)
 	}
 
 	return nil

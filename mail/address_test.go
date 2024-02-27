@@ -5,7 +5,7 @@ import (
 )
 
 func TestParseAddress(t *testing.T) {
-	actual, err := ParseMailAddress("user@example.com")
+	actual, err := ParseAddress("user@example.com")
 	if err != nil {
 		t.Error(err)
 	}
@@ -16,7 +16,7 @@ func TestParseAddress(t *testing.T) {
 }
 
 func TestParseInvalidAddress(t *testing.T) {
-	_, err := ParseMailAddress("user@example")
+	_, err := ParseAddress("user@example")
 	if err == nil {
 		t.Error("invalid")
 	}

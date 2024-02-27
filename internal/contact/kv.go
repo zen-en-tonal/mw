@@ -1,4 +1,4 @@
-package registries
+package contact
 
 import (
 	badger "github.com/dgraph-io/badger/v4"
@@ -13,7 +13,7 @@ func NewKV(opt badger.Options) KV {
 	return KV{opt: opt}
 }
 
-func (k KV) Find(addr mail.MailAddress) (*mail.Contact, error) {
+func (k KV) Find(addr mail.Address) (*Contact, error) {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return nil, err
@@ -35,11 +35,11 @@ func (k KV) Find(addr mail.MailAddress) (*mail.Contact, error) {
 		return nil, err
 	}
 
-	r := mail.NewContact(alias, addr.User())
+	r := New(alias, addr.User())
 	return &r, nil
 }
 
-func (k KV) Update(r mail.Contact) error {
+func (k KV) Update(r Contact) error {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return err
@@ -51,14 +51,14 @@ func (k KV) Update(r mail.Contact) error {
 	})
 }
 
-func (k KV) All() (*[]mail.Contact, error) {
+func (k KV) All() (*[]Contact, error) {
 	db, err := badger.Open(k.opt)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
 
-	var array []mail.Contact
+	var array []Contact
 	err = db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 10
@@ -69,7 +69,7 @@ func (k KV) All() (*[]mail.Contact, error) {
 			item := it.Item()
 			user := string(item.Key())
 			err := item.Value(func(v []byte) error {
-				array = append(array, mail.NewContact(string(v), user))
+				array = append(array, New(string(v), user))
 				return nil
 			})
 			if err != nil {

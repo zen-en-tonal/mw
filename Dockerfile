@@ -1,4 +1,4 @@
-FROM golang:1.19-bullseye
+FROM golang:1.22-bullseye
 
 EXPOSE 25
 EXPOSE 8080
