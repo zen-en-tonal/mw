@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/zen-en-tonal/mw/internal/contact"
+	"github.com/zen-en-tonal/mw/contact"
 	"github.com/zen-en-tonal/mw/mail"
 )
 

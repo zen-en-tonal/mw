@@ -1,12 +1,10 @@
-package forward
+package mail
 
 import (
 	"bytes"
 	"fmt"
 	"io"
 	"net/smtp"
-
-	"github.com/zen-en-tonal/mw/mail"
 )
 
 type MailForward struct {
@@ -17,7 +15,7 @@ type MailForward struct {
 	to       string
 }
 
-func New(hostname string, port int, username string, password string, to string) MailForward {
+func NewMailForward(hostname string, port int, username string, password string, to string) MailForward {
 	return MailForward{
 		hostname: hostname,
 		port:     port,
@@ -27,7 +25,7 @@ func New(hostname string, port int, username string, password string, to string)
 	}
 }
 
-func (m MailForward) Forward(env mail.Envelope) error {
+func (m MailForward) Forward(env Envelope) error {
 	from := env.From().String()
 	recipients := []string{m.to}
 	body := new(bytes.Buffer)

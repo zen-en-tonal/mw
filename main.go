@@ -7,8 +7,8 @@ import (
 	"time"
 
 	badger "github.com/dgraph-io/badger/v4"
+	"github.com/zen-en-tonal/mw/contact"
 	h "github.com/zen-en-tonal/mw/http"
-	"github.com/zen-en-tonal/mw/internal/contact"
 	"github.com/zen-en-tonal/mw/mail"
 	"github.com/zen-en-tonal/mw/smtp"
 	"github.com/zen-en-tonal/mw/webhook"
