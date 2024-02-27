@@ -9,9 +9,9 @@ import (
 	badger "github.com/dgraph-io/badger/v4"
 	h "github.com/zen-en-tonal/mw/http"
 	"github.com/zen-en-tonal/mw/internal/contact"
-	"github.com/zen-en-tonal/mw/internal/slack"
 	"github.com/zen-en-tonal/mw/mail"
 	"github.com/zen-en-tonal/mw/smtp"
+	"github.com/zen-en-tonal/mw/webhook"
 )
 
 var slackUrl = ""
@@ -32,7 +32,7 @@ func init() {
 
 func fowarder() mail.Forwarder {
 	return mail.Forwarders([]mail.Forwarder{
-		slack.New(slackUrl),
+		webhook.NewSlack(slackUrl),
 		// forward.New(smtpHost, smtpPort, smtpUser, smtpPass, smtpTo),
 	})
 }
