@@ -1,7 +1,10 @@
 package webhook
 
 import (
+	"fmt"
+	"io"
 	"log/slog"
+	"strings"
 
 	"github.com/zen-en-tonal/mw/mail"
 )
@@ -64,17 +67,19 @@ func trim(txt string, count int) string {
 	return string(text)
 }
 
-func (s Slack) Forward(e mail.Envelope) error {
+func (s Slack) makePayload(e mail.Envelope) (io.Reader, error) {
 	p, err := s.ToPayload(e)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	p.Text = trim(p.Text, 3000)
+	p.Text = strings.ReplaceAll(fmt.Sprintf("%#v", trim(p.Text, 3000)), "\"", "")
+	return s.Serialize(*p)
+}
 
-	r, err := s.Serialize(*p)
+func (s Slack) Forward(e mail.Envelope) error {
+	r, err := s.makePayload(e)
 	if err != nil {
 		return err
 	}
-
 	return s.Post(r)
 }
