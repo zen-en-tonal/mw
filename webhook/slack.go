@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"strings"
 
@@ -14,7 +13,7 @@ type Slack struct {
 }
 
 func NewSlack(url string) Slack {
-	return Slack{MustNew(url, temp, WithMarkdownParser)}
+	return Slack{MustNew(url, temp, WithConvertMarkdown)}
 }
 
 const temp = `
@@ -67,19 +66,20 @@ func trim(txt string, count int) string {
 	return string(text)
 }
 
-func (s Slack) makePayload(e mail.Envelope) (io.Reader, error) {
+func (s Slack) MakePayload(e mail.Envelope) (*Payload, error) {
 	p, err := s.ToPayload(e)
 	if err != nil {
 		return nil, err
 	}
-	p.Text = strings.ReplaceAll(fmt.Sprintf("%#v", trim(p.Text, 3000)), "\"", "")
-	return s.Serialize(*p)
+	p.Text = strings.ReplaceAll(fmt.Sprintf("%#v", p.Text), "\"", "")
+	p.Text = trim(p.Text, 3000)
+	return p, nil
 }
 
 func (s Slack) Forward(e mail.Envelope) error {
-	r, err := s.makePayload(e)
+	payload, err := s.MakePayload(e)
 	if err != nil {
 		return err
 	}
-	return s.Post(r)
+	return s.Post(*payload)
 }
