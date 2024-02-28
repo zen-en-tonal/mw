@@ -70,6 +70,7 @@ func (s Slack) MakePayload(e mail.Envelope) (*Payload, error) {
 	p, err := s.ToPayload(e)
 	if err != nil {
 		return nil, err
+		return nil, err
 	}
 	p.Text = strings.ReplaceAll(fmt.Sprintf("%#v", p.Text), "\"", "")
 	p.Text = trim(p.Text, 3000)
