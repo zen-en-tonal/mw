@@ -29,7 +29,10 @@ type Payload struct {
 
 type Option func(*Webhook)
 
-func WithMarkdownParser(w *Webhook) {
+// WithConvertMarkdown converts HTML body into markdown.
+//
+// If failed to converting, the original HTML body is put in.
+func WithConvertMarkdown(w *Webhook) {
 	converter := md.NewConverter("", true, nil)
 	f := func(s string) string {
 		markdown, err := converter.ConvertString(s)
@@ -68,6 +71,7 @@ func MustNew(url string, temp string, options ...Option) Webhook {
 	return *w
 }
 
+// ToPayload converts the Envelope into a Payload.
 func (w Webhook) ToPayload(e mail.Envelope) (*Payload, error) {
 	env, err := enmime.ReadEnvelope(e.Data())
 	if err != nil {
@@ -88,6 +92,7 @@ func (w Webhook) ToPayload(e mail.Envelope) (*Payload, error) {
 	}, nil
 }
 
+// Serialize unmarshals the Payload into a Reader.
 func (w Webhook) Serialize(p Payload) (io.Reader, error) {
 	txt := new(bytes.Buffer)
 	if err := w.template.Execute(txt, p); err != nil {
@@ -96,7 +101,14 @@ func (w Webhook) Serialize(p Payload) (io.Reader, error) {
 	return txt, nil
 }
 
-func (s Webhook) Post(r io.Reader) error {
+// Post posts the Payload as json.
+//
+// If respouned a error status, Post returns a error.
+func (s Webhook) Post(p Payload) error {
+	r, err := s.Serialize(p)
+	if err != nil {
+		return err
+	}
 	resp, err := http.Post(s.endpoint, "application/json", r)
 	if err != nil {
 		return err
@@ -112,9 +124,5 @@ func (s Webhook) Forward(e mail.Envelope) error {
 	if err != nil {
 		return err
 	}
-	r, err := s.Serialize(*payload)
-	if err != nil {
-		return err
-	}
-	return s.Post(r)
+	return s.Post(*payload)
 }
